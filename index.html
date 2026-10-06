@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JEV: Fast, typed AI decisions inside enterprise workflows</title>
+<meta name="description" content="A community talk on where a System One Model fits, what it should not replace, and a practical agenda-generator demo.">
+<meta name="theme-color" content="#232F3E">
+<script>document.documentElement.className = "js";</script>
+<style>
+:root{
+  --ink:#232F3E;
+  --ink-deep:#161E27;
+  --slate:#37475A;
+  --muted:#55606E;
+  --orange:#FF9900;
+  --burnt:#B34E00;
+  --paper:#F5F6F7;
+  --white:#FFFFFF;
+  --line:#D5DAE0;
+  --tint:#FFF0DB;
+  --good:#2E7D4F;
+  --warn:#9A5B00;
+  --bad:#B3302B;
+  --on-dark:#E8ECF0;
+  --on-dark-muted:#AAB4C0;
+  --font:"Avenir Next","Segoe UI",Roboto,"Helvetica Neue",Arial,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:var(--font);
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.5;
+  font-size:1.05rem;
+  -webkit-text-size-adjust:100%;
+  transition:background-color .25s,color .25s;
+}
+body[data-theme="dark"]{background:var(--ink);color:var(--on-dark)}
+body[data-theme="deep"]{background:var(--ink-deep);color:var(--on-dark)}
+
+.js body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
+.slide{
+  width:100%;max-width:1120px;margin:auto;
+  padding:clamp(1.1rem,3.2vw,2.4rem) clamp(1.1rem,5vw,3.5rem);
+}
+.js .slide{display:none}
+.js .slide.active{display:block}
+.slide:focus{outline:none}
+
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.02em;line-height:1.08}
+.slide-title{font-size:clamp(1.8rem,4.2vw,3rem);max-width:30ch;text-wrap:balance}
+.sub{font-size:clamp(1.05rem,1.9vw,1.3rem);color:var(--muted);max-width:60ch;margin:.9rem 0 0}
+[data-theme="dark"] .sub,[data-theme="deep"] .sub{color:var(--on-dark-muted)}
+.body{margin-top:clamp(1.5rem,3.5vw,2.5rem)}
+p{margin:0}
+a{color:var(--burnt);text-underline-offset:3px}
+[data-theme="dark"] a,[data-theme="deep"] a{color:var(--orange)}
+:focus-visible{outline:3px solid var(--orange);outline-offset:3px;border-radius:2px}
+
+ul.list{list-style:none;margin:0;padding:0}
+ul.list li{position:relative;padding:.3rem 0 .3rem 1.15rem}
+ul.list li::before{content:"";position:absolute;left:0;top:.95em;width:.45rem;height:.45rem;background:var(--burnt)}
+[data-theme="dark"] ul.list li::before,[data-theme="deep"] ul.list li::before{background:var(--orange)}
+
+/* ---------- Title slide ---------- */
+.kicker{font-size:.95rem;font-weight:700;color:var(--orange);margin-bottom:1.1rem}
+.title-grid{display:grid;gap:clamp(1.75rem,4vw,3.5rem);align-items:center}
+@media(min-width:900px){.title-grid{grid-template-columns:1.3fr 1fr}}
+.title-grid h1{font-size:clamp(2.1rem,5vw,3.6rem);color:var(--white);text-wrap:balance}
+.title-grid .sub{color:var(--on-dark-muted);margin-top:1.25rem}
+.foot-line{margin-top:2.2rem;font-size:.95rem;color:var(--on-dark-muted)}
+.xform{background:var(--ink-deep);border:1px solid #3b4a5c;padding:1.25rem 1.3rem 1.1rem}
+.xform .raw{font-family:var(--mono);font-size:.9rem;color:var(--on-dark);padding-bottom:1rem;border-bottom:1px dashed #55657A}
+.xform .arrow{font-size:.85rem;color:var(--on-dark-muted);padding:.7rem 0 .5rem}
+.fieldrow{display:grid;grid-template-columns:7.2rem 1fr 2.6rem;align-items:center;gap:.7rem;padding:.38rem 0;font-family:var(--mono);font-size:.85rem}
+.fieldrow .k{color:var(--on-dark-muted)}
+.fieldrow .v{color:var(--white)}
+.fieldrow .p{text-align:right;color:var(--orange)}
+.fieldrow .vwrap{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.meter{display:block;height:.35rem;background:#2f3d4d;position:relative;overflow:hidden}
+.meter::after{content:"";position:absolute;inset:0 auto 0 0;width:calc(var(--p)*100%);background:var(--orange);transform-origin:left;animation:fill .9s .2s cubic-bezier(.2,.7,.2,1) both}
+@keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.xform .cap{margin-top:.8rem;font-size:.78rem;color:var(--on-dark-muted)}
+
+/* ---------- Takeaway ---------- */
+.lead{font-size:clamp(1.25rem,2.8vw,1.9rem);line-height:1.3;font-weight:500;max-width:34ch;padding:1.1rem 1.25rem;background:var(--tint);border-left:5px solid var(--orange)}
+.lead strong{font-weight:800}
+.cols{display:grid;gap:1.5rem 2rem;margin-top:clamp(1.5rem,3vw,2.25rem)}
+@media(min-width:760px){.cols.three{grid-template-columns:repeat(3,1fr)}.cols.two{grid-template-columns:1fr 1fr}}
+.col{border-top:4px solid var(--ink);padding-top:.8rem}
+.col.a{border-color:var(--burnt)}
+.col.b{border-color:var(--orange)}
+.col h3{font-size:1.25rem;margin-bottom:.4rem}
+
+/* ---------- Concept ---------- */
+.concept{display:grid;gap:2rem}
+@media(min-width:860px){.concept{grid-template-columns:minmax(260px,.8fr) 1.2fr;align-items:start}}
+.stack{display:flex;flex-direction:column;align-items:stretch;gap:.5rem}
+.stack .node{padding:.9rem 1rem;background:var(--white);border:1px solid var(--line);font-weight:700;text-align:center}
+.stack .node.core{background:var(--ink);color:var(--white);padding:1.3rem 1rem}
+.stack .node.core .big{display:block;font-size:2.2rem;line-height:1;letter-spacing:-.02em;color:var(--orange);margin-top:.35rem}
+.stack .node.core small{display:block;font-weight:500;color:var(--on-dark-muted);font-size:.9rem}
+.stack .down{text-align:center;color:var(--muted);line-height:1}
+.stack .note{font-size:.88rem;color:var(--muted);text-align:center;margin-top:.2rem}
+dl.defs{margin:0}
+dl.defs div{padding:.85rem 0;border-top:1px solid var(--line)}
+dl.defs div:first-child{border-top:0;padding-top:0}
+dl.defs dt{font-weight:800;color:var(--burnt)}
+dl.defs dd{margin:.15rem 0 0}
+.callout{margin-top:1.75rem;padding:.9rem 1.1rem;background:var(--tint);border-left:5px solid var(--orange);font-weight:600}
+
+/* ---------- Tables ---------- */
+.tbl{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--line);font-size:.98rem}
+.tbl th,.tbl td{padding:.75rem .9rem;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.tbl thead th{background:var(--ink);color:var(--white);font-weight:700;font-size:.92rem}
+.tbl thead th.hl{background:var(--slate)}
+.tbl tbody th{font-weight:800;color:var(--burnt)}
+.tbl tbody tr:nth-child(even){background:#FAFBFC}
+.tbl .low{color:var(--good);font-weight:700}
+.tbl .med{color:var(--warn);font-weight:700}
+.tbl .st{font-weight:800;white-space:nowrap}
+.dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;margin-right:.45em;vertical-align:baseline;background:var(--muted)}
+.dot.amber{background:#F5A623}.dot.green{background:#2E9E5B}
+.st.risk{color:var(--warn)}.st.ok{color:var(--good)}.st.act{color:var(--bad)}
+@media(max-width:760px){
+  .tbl thead{position:absolute;left:-9999px}
+  .tbl,.tbl tbody,.tbl tr,.tbl td,.tbl th{display:block;width:100%}
+  .tbl tr{padding:.7rem .9rem;border-bottom:1px solid var(--line)}
+  .tbl th,.tbl td{padding:.15rem 0;border:0}
+  .tbl td[data-label]::before{content:attr(data-label);display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin-top:.35rem}
+  .tbl .st{white-space:normal}
+}
+
+/* ---------- Fit test ---------- */
+.fit{display:grid;gap:1.25rem}
+@media(min-width:760px){.fit{grid-template-columns:1fr 1fr}}
+.fit section{padding:1.25rem 1.4rem;border-top:6px solid var(--good);background:#EAF4EE}
+.fit section.no{border-top-color:var(--bad);background:#FBECEB}
+.fit h3{font-size:1.4rem;margin-bottom:.5rem}
+.fit .yes h3{color:var(--good)}
+.fit .no h3{color:var(--bad)}
+
+/* ---------- Architecture ---------- */
+ol.flow{list-style:none;margin:0;padding:0;display:grid;gap:0}
+ol.flow li{position:relative;padding:0 0 1.4rem 3.4rem}
+ol.flow li:last-child{padding-bottom:0}
+ol.flow li::before{content:attr(data-n);position:absolute;left:0;top:0;width:2.3rem;height:2.3rem;background:var(--burnt);color:var(--white);font-weight:800;display:grid;place-items:center}
+ol.flow li.core::before{background:var(--ink)}
+ol.flow li::after{content:"";position:absolute;left:1.1rem;top:2.4rem;bottom:.1rem;width:2px;background:var(--line)}
+ol.flow li:last-child::after{display:none}
+ol.flow h3{font-size:1.15rem}
+ol.flow p{color:var(--muted);font-size:.96rem}
+@media(min-width:900px){
+  ol.flow{grid-template-columns:repeat(5,1fr);gap:1rem}
+  ol.flow li{padding:3.1rem 0 0 0}
+  ol.flow li::after{left:2.4rem;right:-1rem;top:1.1rem;bottom:auto;width:auto;height:2px}
+}
+.audit{margin-top:2rem;padding:1.1rem 1.3rem;background:var(--ink);color:var(--on-dark)}
+.audit strong{color:var(--orange)}
+.audit small{display:block;margin-top:.6rem;color:var(--on-dark-muted);font-size:.9rem}
+
+/* ---------- Demo columns ---------- */
+.demo{display:grid;gap:1.25rem}
+@media(min-width:860px){.demo{grid-template-columns:1fr 1.15fr 1fr;align-items:stretch}}
+.demo section{padding:1.2rem 1.3rem;background:var(--white);border:1px solid var(--line)}
+.demo h3{font-size:1.25rem;margin-bottom:.5rem}
+.demo section.mid{background:var(--ink);color:var(--on-dark);border-color:var(--ink)}
+.demo .mid h3{color:var(--orange);text-align:center}
+.demo .mid .step{padding:.6rem .8rem;margin-top:.5rem;background:var(--slate);font-size:.95rem;text-align:center}
+.demo .mid .foot{margin-top:.8rem;text-align:center;font-size:.85rem;color:var(--on-dark-muted)}
+.tag{display:inline-block;margin-top:1rem;padding:.45rem .7rem;font-weight:700;font-size:.92rem;background:var(--tint);color:var(--burnt)}
+.tag.n{background:#EEF0F3;color:var(--ink)}
+
+/* ---------- Payload ---------- */
+.code2{display:grid;gap:1.25rem}
+@media(min-width:860px){.code2{grid-template-columns:1fr 1fr}}
+.code2>div{min-width:0}
+.code2 h3{font-size:.95rem;color:var(--orange);margin-bottom:.5rem}
+pre{margin:0;padding:1.1rem 1.2rem;background:#26323F;color:var(--on-dark);font-family:var(--mono);font-size:.82rem;line-height:1.55;overflow-x:auto;border:1px solid #3b4a5c;tab-size:2}
+.policy{margin-top:1.5rem;padding:.9rem 1.1rem;background:var(--slate);color:var(--white);font-weight:700}
+
+/* ---------- Agenda ---------- */
+.panel{padding:clamp(.9rem,2vw,1.4rem);background:var(--white);border:1px solid var(--line)}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.4rem 1rem;align-items:baseline;margin-bottom:1rem}
+.panel-head h3{font-size:1.3rem}
+.panel-head span{font-size:.9rem;font-weight:700;color:var(--good)}
+
+/* ---------- Pilot ---------- */
+ol.weeks{list-style:none;margin:0;padding:0;display:grid;gap:1rem}
+@media(min-width:760px){ol.weeks{grid-template-columns:repeat(4,1fr)}}
+ol.weeks li{background:var(--white);border:1px solid var(--line);border-top:0}
+ol.weeks .wk{display:block;padding:.45rem .9rem;font-size:.85rem;font-weight:700;color:var(--white);background:var(--burnt)}
+ol.weeks li:nth-child(2) .wk{background:var(--slate)}
+ol.weeks li:nth-child(3) .wk{background:var(--orange);color:var(--ink)}
+ol.weeks li:nth-child(4) .wk{background:#F5A623;color:var(--ink)}
+ol.weeks .in{padding:.9rem}
+ol.weeks h3{font-size:1.35rem;margin-bottom:.4rem}
+ol.weeks ul.list li{border:0;background:none;padding:.2rem 0 .2rem 1.1rem;font-size:.95rem}
+ol.weeks ul.list li::before{top:.85em}
+.exit{margin-top:2rem}
+.exit h3{font-size:1.25rem;margin-bottom:.8rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.9rem}
+.stat{padding:.8rem .9rem;background:var(--white);border:1px solid var(--line)}
+.stat b{display:block;font-size:clamp(1.5rem,3.2vw,2.1rem);line-height:1.1;letter-spacing:-.02em;color:var(--ink)}
+.stat span{font-size:.88rem;color:var(--muted)}
+
+/* ---------- Closing ---------- */
+.closing h2{color:var(--white);font-size:clamp(2rem,5vw,3.6rem);max-width:22ch}
+.who{display:grid;gap:1rem;margin:2rem 0 0;padding:0}
+@media(min-width:760px){.who{grid-template-columns:repeat(3,1fr)}}
+.who div{padding:1rem 1.1rem;background:var(--slate)}
+.who dt{font-size:.85rem;font-weight:700;color:var(--orange)}
+.who dd{margin:.25rem 0 0;font-weight:800;font-size:1.1rem;color:var(--white)}
+.record{margin-top:1.25rem;padding:.9rem 1.1rem;background:#2f3d4d;color:var(--on-dark);font-weight:700}
+.closing .ask{margin-top:1.75rem;color:var(--on-dark-muted)}
+
+/* ---------- Sources ---------- */
+.src{padding:1.1rem 1.25rem;background:var(--white);border:1px solid var(--line)}
+.src h3{font-size:1.1rem;color:var(--burnt)}
+.src p{margin-top:.5rem;word-break:break-word}
+.src small{display:block;margin-top:.6rem;color:var(--muted)}
+.vendor{margin-top:1rem;padding:1.1rem 1.25rem;background:var(--tint);border-left:5px solid var(--orange)}
+.vendor h3{font-size:1.1rem;color:var(--warn);margin-bottom:.35rem}
+
+/* ---------- Nav ---------- */
+.nav{flex:none;display:flex;align-items:center;gap:.6rem;padding:.5rem clamp(.75rem,3vw,1.5rem) calc(.5rem + env(safe-area-inset-bottom));background:var(--white);border-top:1px solid var(--line);transition:background-color .25s,border-color .25s}
+body[data-theme="dark"] .nav,body[data-theme="deep"] .nav{background:var(--ink-deep);border-color:#3b4a5c}
+.nav button{appearance:none;border:0;min-width:3rem;height:3rem;padding:0 1.1rem;font:inherit;font-weight:700;background:var(--ink);color:var(--white);cursor:pointer}
+.nav button:hover:not(:disabled){background:var(--slate)}
+.nav button.next{background:var(--orange);color:var(--ink)}
+.nav button.next:hover:not(:disabled){background:#E88B00}
+.nav button:disabled{opacity:.35;cursor:default}
+body[data-theme="dark"] .nav button:not(.next),body[data-theme="deep"] .nav button:not(.next){background:var(--slate)}
+.count{flex:1;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+body[data-theme="dark"] .count,body[data-theme="deep"] .count{color:var(--on-dark-muted)}
+.progress{position:fixed;left:0;top:0;height:4px;width:100%;background:transparent;z-index:5}
+.progress i{display:block;height:100%;width:0;background:var(--orange);transition:width .25s}
+.nojs-hide{display:none}
+html:not(.js) .nav,html:not(.js) .progress{display:none}
+html:not(.js) .slide{border-bottom:1px solid var(--line);margin-bottom:2rem}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+@media print{
+  .js body{display:block;height:auto;overflow:visible}
+  .js .stage{overflow:visible}
+  .js .slide{display:block!important;break-after:page;max-width:none}
+  .nav,.progress{display:none}
+  body,body[data-theme]{background:#fff!important;color:#000!important}
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+<main class="stage" id="stage">
+
+<!-- 1 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="dark" aria-label="Title">
+  <div class="title-grid">
+    <div>
+      <p class="kicker">Technology demo</p>
+      <h1 class="slide-heading" tabindex="-1">JEV: Fast, typed AI decisions inside enterprise workflows</h1>
+      <p class="sub">Where a System One Model fits, what it should not replace, and a practical CCoE agenda demo.</p>
+      <p class="foot-line">Cloud Center of Excellence | AWS Community Event</p>
+    </div>
+    <div class="xform" role="img" aria-label="Example: an unstructured status line becomes typed decisions with probabilities">
+      <p class="raw">state: “Vulnerability SLA at 6 days; owner unset…”</p>
+      <p class="arrow">Unstructured state → typed decisions</p>
+      <div class="fieldrow"><span class="k">status</span><span class="vwrap"><span class="v">at_risk</span><span class="meter" style="--p:.91"></span></span><span class="p">.91</span></div>
+      <div class="fieldrow"><span class="k">escalation</span><span class="vwrap"><span class="v">tier_1</span><span class="meter" style="--p:.84"></span></span><span class="p">.84</span></div>
+      <div class="fieldrow"><span class="k">agenda_section</span><span class="vwrap"><span class="v">security</span><span class="meter" style="--p:.97"></span></span><span class="p">.97</span></div>
+      <div class="fieldrow"><span class="k">needs_owner</span><span class="vwrap"><span class="v">true</span><span class="meter" style="--p:.99"></span></span><span class="p">.99</span></div>
+      <p class="cap">Illustrative output</p>
+    </div>
+  </div>
+</article>
+
+<!-- 2 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="The takeaway">
+  <h2 class="slide-title slide-heading" tabindex="-1">The takeaway</h2>
+  <p class="sub">JEV is not a chatbot. It is a low-latency decision engine for software workflows.</p>
+  <div class="body">
+    <p class="lead">Use an LLM to <strong>write and reason</strong>. Use JEV to <strong>classify, route, score, and branch</strong> inside constrained code.</p>
+    <div class="cols three">
+      <section class="col">
+        <h3>Best fit</h3>
+        <ul class="list"><li>Repeated decisions at API speed</li><li>Known output schema</li><li>Confidence-aware routing</li></ul>
+      </section>
+      <section class="col a">
+        <h3>Enterprise opportunity</h3>
+        <ul class="list"><li>IDP orchestration</li><li>Security finding triage</li><li>Application smart routing</li></ul>
+      </section>
+      <section class="col b">
+        <h3>First move</h3>
+        <ul class="list"><li>De-identified pilot</li><li>Shadow mode only</li><li>Measure accuracy, latency, cost</li></ul>
+      </section>
+    </div>
+  </div>
+</article>
+
+<!-- 3 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="What JEV is">
+  <h2 class="slide-title slide-heading" tabindex="-1">What JEV is</h2>
+  <p class="sub">TypeSafe AI’s first public System One Model, currently described as early access.</p>
+  <div class="body concept">
+    <div class="stack" role="img" aria-label="Unstructured state goes into a frontier-intelligence function call, JEV, and comes out as typed, probabilistic decisions">
+      <div class="node">Unstructured state</div>
+      <div class="down" aria-hidden="true">↓</div>
+      <div class="node core"><small>Frontier-intelligence function call</small><span class="big">JEV</span></div>
+      <div class="down" aria-hidden="true">↓</div>
+      <div class="node">Typed, probabilistic decisions</div>
+      <p class="note">All outputs returned in parallel</p>
+    </div>
+    <dl class="defs">
+      <div><dt>Schema-first</dt><dd>Possible outputs and structure are defined before the call.</dd></div>
+      <div><dt>Probability-first</dt><dd>Every decision carries confidence / uncertainty.</dd></div>
+      <div><dt>Parallel</dt><dd>Independent outputs are sampled together—not token by token.</dd></div>
+      <div><dt>No prose generation</dt><dd>It gives up free-form strings to constrain behavior.</dd></div>
+    </dl>
+  </div>
+  <p class="callout">Important: “cannot hallucinate” refers to schema-valid output, not guaranteed factual correctness.</p>
+</article>
+
+<!-- 4 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="JEV versus a general-purpose LLM">
+  <h2 class="slide-title slide-heading" tabindex="-1">JEV versus a general-purpose LLM</h2>
+  <p class="sub">Different interfaces for different jobs—not an either/or platform decision.</p>
+  <div class="body">
+    <table class="tbl">
+      <thead><tr><th scope="col">Dimension</th><th scope="col">General-purpose LLM</th><th scope="col" class="hl">JEV / System One Model</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Primary output</th><td data-label="General-purpose LLM">Generated strings</td><td data-label="JEV / System One Model">Typed structured values</td></tr>
+        <tr><th scope="row">Best at</th><td data-label="General-purpose LLM">Explanation, synthesis, drafting, deep reasoning</td><td data-label="JEV / System One Model">Classification, routing, scoring, extraction, branching</td></tr>
+        <tr><th scope="row">Sampling</th><td data-label="General-purpose LLM">Sequential token generation</td><td data-label="JEV / System One Model">Parallel decision outputs</td></tr>
+        <tr><th scope="row">Software integration</th><td data-label="General-purpose LLM">Parse + validate + retry</td><td data-label="JEV / System One Model">Schema-constrained by design</td></tr>
+        <tr><th scope="row">Uncertainty</th><td data-label="General-purpose LLM">Often prompted; may be inconsistent</td><td data-label="JEV / System One Model">Probability and confidence are first-class</td></tr>
+        <tr><th scope="row">Failure mode</th><td data-label="General-purpose LLM">Invalid / invented text or tool calls</td><td data-label="JEV / System One Model">Schema-valid but potentially wrong decision</td></tr>
+        <tr><th scope="row">Enterprise role</th><td data-label="General-purpose LLM">Human-facing copilot</td><td data-label="JEV / System One Model">Machine-facing decision service</td></tr>
+      </tbody>
+    </table>
+  </div>
+</article>
+
+<!-- 5 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="A simple fit test">
+  <h2 class="slide-title slide-heading" tabindex="-1">A simple fit test</h2>
+  <p class="sub">A JEV candidate should satisfy most of the green criteria; red criteria suggest another tool.</p>
+  <div class="body fit">
+    <section class="yes">
+      <h3>Strong candidate</h3>
+      <ul class="list">
+        <li>The allowed outcomes are known in advance</li>
+        <li>The same fuzzy decision runs frequently</li>
+        <li>Sub-second latency matters</li>
+        <li>Confidence can drive escalation or fallback</li>
+        <li>Surrounding code enforces policy and side effects</li>
+        <li>A labeled or reference evaluation set can be built</li>
+      </ul>
+    </section>
+    <section class="no">
+      <h3>Use something else</h3>
+      <ul class="list">
+        <li>The output must be a narrative or explanation</li>
+        <li>The task requires long-horizon reasoning</li>
+        <li>The answer depends on browsing or external tools</li>
+        <li>The decision cannot be safely reversed or reviewed</li>
+        <li>Errors could directly affect clinical care</li>
+        <li>No ground truth or human review path exists</li>
+      </ul>
+    </section>
+  </div>
+</article>
+
+<!-- 6 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="How JEV fits a possible enterprise application">
+  <h2 class="slide-title slide-heading" tabindex="-1">How JEV fits a possible enterprise application</h2>
+  <p class="sub">Treat it as a constrained decision dependency—not an autonomous agent.</p>
+  <div class="body">
+    <ol class="flow">
+      <li data-n="1"><h3>Workflow state</h3><p>ADO, alerts, cloud metadata, portal request</p></li>
+      <li data-n="2"><h3>Data minimization</h3><p>Remove PHI / secrets; allow-list fields</p></li>
+      <li data-n="3" class="core"><h3>JEV decision</h3><p>Typed probabilities; sub-second target</p></li>
+      <li data-n="4"><h3>Policy gate</h3><p>Thresholds, RBAC, OPA, human review</p></li>
+      <li data-n="5"><h3>Deterministic action</h3><p>Route, queue, render, or no-op</p></li>
+    </ol>
+    <div class="audit">
+      <p><strong>Audit every call:</strong> schema version • input hash • model/version • output probabilities • threshold • final action • reviewer override</p>
+      <small>Keep existing controls: Okta, least privilege, network egress restrictions, CloudWatch/SIEM retention, and rollback.</small>
+    </div>
+  </div>
+</article>
+
+<!-- 7 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="Demo: agenda generator">
+  <h2 class="slide-title slide-heading" tabindex="-1">Demo: make the AWS Community agenda generator operational</h2>
+  <p class="sub">JEV handles the decisions; code renders the approved 60-minute agenda template.</p>
+  <div class="body demo">
+    <section>
+      <h3>Inputs</h3>
+      <ul class="list"><li>Carryover action items</li><li>Squad status updates</li><li>Security and cost alerts</li><li>RFC / ADR queue</li><li>Recent deep-dive history</li></ul>
+      <span class="tag">No PHI required</span>
+    </section>
+    <section class="mid">
+      <h3>JEV decision layer</h3>
+      <div class="step">Status: on track / at risk / blocked</div>
+      <div class="step">Escalation: Tier 1 / 2 / 3 / none</div>
+      <div class="step">Agenda section + priority score</div>
+      <div class="step">Deep-dive category recommendation</div>
+      <div class="step">Needs owner / due date / parking lot</div>
+      <p class="foot">Each decision includes confidence</p>
+    </section>
+    <section>
+      <h3>Deterministic output</h3>
+      <ul class="list"><li>Standard 60-minute structure</li><li>Named roles in the header</li><li>KPIs and status tags</li><li>WHO / WHAT / WHEN actions</li><li>Overflow moved to Parking Lot</li></ul>
+      <span class="tag n">Confluence-ready agenda</span>
+    </section>
+  </div>
+</article>
+
+<!-- 8 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="deep" aria-label="Demo payload">
+  <h2 class="slide-title slide-heading" tabindex="-1" style="color:#fff">Demo payload: typed decisions, not generated prose</h2>
+  <p class="sub">Illustrative API contract for the agenda workflow</p>
+  <div class="body code2">
+    <div>
+      <h3>Request schema</h3>
+<pre><code>state: "Vulnerability SLA at 6 days; owner unset..."
+
+decisions:
+  status: enum[on_track, at_risk, blocked]
+  escalation: enum[none, tier_1, tier_2, tier_3]
+  agenda_section: enum[security, architecture, ...]
+  priority: probability
+  needs_owner: boolean
+  needs_due_date: boolean
+  confidence: probability</code></pre>
+    </div>
+    <div>
+      <h3>Illustrative response</h3>
+<pre><code>{
+  "status": {"value": "at_risk", "p": 0.91},
+  "escalation": {"value": "tier_1", "p": 0.84},
+  "agenda_section": {"value": "security", "p": 0.97},
+  "priority": 0.94,
+  "needs_owner": {"value": true, "p": 0.99},
+  "needs_due_date": {"value": true, "p": 0.99},
+  "confidence": 0.89
+}</code></pre>
+    </div>
+  </div>
+  <p class="policy">Policy: if confidence &lt; 0.85 → human review; if owner or due date is missing → block publication.</p>
+</article>
+
+<!-- 9 ---------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="What the demo produces">
+  <h2 class="slide-title slide-heading" tabindex="-1">What the demo produces</h2>
+  <p class="sub">The model does not write the meeting. A deterministic renderer applies approved rules.</p>
+  <div class="body panel">
+    <div class="panel-head"><h3>AWS Community — Agenda excerpt</h3><span>60 minutes, fixed</span></div>
+    <table class="tbl">
+      <thead><tr><th scope="col">Time</th><th scope="col">Section</th><th scope="col">Decision / discussion</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">5 min</th><td data-label="Section">Opening and roll call</td><td data-label="Decision / discussion">Carryover actions: require owner + due date</td><td class="st risk" data-label="Status"><span class="dot amber"></span>At risk</td></tr>
+        <tr><th scope="row">5 min</th><td data-label="Section">Cloud metrics dashboard</td><td data-label="Decision / discussion">MTTR, spend variance, IaC coverage</td><td class="st ok" data-label="Status"><span class="dot green"></span>On track</td></tr>
+        <tr><th scope="row">10 min</th><td data-label="Section">Security and compliance</td><td data-label="Decision / discussion">Critical vuln at day 6; assign remediation owner</td><td class="st risk" data-label="Status"><span class="dot amber"></span>At risk</td></tr>
+        <tr><th scope="row">10 min</th><td data-label="Section">Engineering deep dive</td><td data-label="Decision / discussion">JEV structured-decision POC</td><td class="st" data-label="Status">Presenter: TBD</td></tr>
+        <tr><th scope="row">5 min</th><td data-label="Section">Decisions and close</td><td data-label="Decision / discussion">Tier 1 AWS Community action; due date required</td><td class="st act" data-label="Status">Action required</td></tr>
+      </tbody>
+    </table>
+  </div>
+</article>
+
+<!-- 10 --------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="Where an enterprise could use it">
+  <h2 class="slide-title slide-heading" tabindex="-1">Where an enterprise could use it</h2>
+  <p class="sub">Start with high-volume operational decisions that do not require PHI.</p>
+  <div class="body">
+    <table class="tbl">
+      <thead><tr><th scope="col">Use case</th><th scope="col">JEV decision</th><th scope="col">Value</th><th scope="col">Risk</th><th scope="col">Start</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">CCoE agenda orchestration</th><td data-label="JEV decision">Classify, prioritize, escalate</td><td data-label="Value">Less prep; tighter meetings</td><td class="low" data-label="Risk">Low</td><td data-label="Start"><b>Pilot first</b></td></tr>
+        <tr><th scope="row">Security finding triage</th><td data-label="JEV decision">Severity, owner queue, SLA risk</td><td data-label="Value">Faster remediation routing</td><td class="med" data-label="Risk">Medium</td><td data-label="Start"><b>Shadow mode</b></td></tr>
+        <tr><th scope="row">Application workspace placement</th><td data-label="JEV decision">Cluster/template/capacity route</td><td data-label="Value">Lower latency + cost</td><td class="med" data-label="Risk">Medium</td><td data-label="Start"><b>Recommend only</b></td></tr>
+        <tr><th scope="row">Cloud cost anomaly triage</th><td data-label="JEV decision">Expected / investigate / escalate</td><td data-label="Value">Faster FinOps response</td><td class="low" data-label="Risk">Low</td><td data-label="Start"><b>Pilot second</b></td></tr>
+        <tr><th scope="row">Incident alert enrichment</th><td data-label="JEV decision">Service, team, urgency, duplicate</td><td data-label="Value">Reduce alert toil</td><td class="med" data-label="Risk">Medium</td><td data-label="Start"><b>No auto-close</b></td></tr>
+        <tr><th scope="row">AI output guardrail</th><td data-label="JEV decision">Pass / review / block with confidence</td><td data-label="Value">Safer AI workflows</td><td class="med" data-label="Risk">Medium</td><td data-label="Start"><b>Evaluate offline</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+</article>
+
+<!-- 11 --------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="30-day proof of value">
+  <h2 class="slide-title slide-heading" tabindex="-1">30-day proof of value</h2>
+  <p class="sub">Run your workflow in shadow mode and make a data-based go / no-go decision.</p>
+  <div class="body">
+    <ol class="weeks">
+      <li><span class="wk">Week 1</span><div class="in"><h3>Frame</h3><ul class="list"><li>Confirm early access + API</li><li>Define schema and thresholds</li><li>Create 100-case eval set</li></ul></div></li>
+      <li><span class="wk">Week 2</span><div class="in"><h3>Build</h3><ul class="list"><li>Implement adapter + audit</li><li>Deterministic renderer</li><li>LLM baseline comparator</li></ul></div></li>
+      <li><span class="wk">Week 3</span><div class="in"><h3>Shadow</h3><ul class="list"><li>Run on real CCoE inputs</li><li>No automated publishing</li><li>Capture reviewer overrides</li></ul></div></li>
+      <li><span class="wk">Week 4</span><div class="in"><h3>Decide</h3><ul class="list"><li>Analyze quality / cost</li><li>Threat and failure review</li><li>Go, revise, or stop</li></ul></div></li>
+    </ol>
+    <div class="exit">
+      <h3>Exit criteria</h3>
+      <div class="stats">
+        <div class="stat"><b>≥ 90%</b><span>decision agreement</span></div>
+        <div class="stat"><b>&lt; 500 ms</b><span>p95 model latency</span></div>
+        <div class="stat"><b>0</b><span>schema violations</span></div>
+        <div class="stat"><b>100%</b><span>auditable decisions</span></div>
+        <div class="stat"><b>≥ 50%</b><span>prep-time reduction</span></div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<!-- 12 --------------------------------------------------------------- -->
+<article class="slide closing" data-theme="dark" aria-label="Proposed decision">
+  <p class="kicker">Proposed CCoE decision</p>
+  <h2 class="slide-heading" tabindex="-1">Approve a narrow, de&#8209;identified JEV proof of value</h2>
+  <p class="sub">Use your application workflow to test the technology—not to prove a predetermined outcome.</p>
+  <dl class="who">
+    <div><dt>Owner</dt><dd>Application TPOC</dd></div>
+    <div><dt>Partners</dt><dd>Security • AICOE • Architecture</dd></div>
+    <div><dt>Due</dt><dd>Pilot kickoff after ARB approval</dd></div>
+  </dl>
+  <p class="record">Decision record: scope • owner • evaluation gates • prohibited uses • stop conditions</p>
+  <p class="ask">Questions / technical discussion</p>
+</article>
+
+<!-- 13 --------------------------------------------------------------- -->
+<article class="slide" data-theme="light" aria-label="Sources and validation notes">
+  <h2 class="slide-title slide-heading" tabindex="-1">Sources and validation notes</h2>
+  <p class="sub">Keep vendor claims separate from your own pilot evidence.</p>
+  <div class="body cols two">
+    <div>
+      <div class="src">
+        <h3>Primary source</h3>
+        <p>TypeSafe AI — “Introducing System One Models &amp; Jev”</p>
+        <p><a href="https://typesafe.ai/blog/introducing-system-one-models-and-jev" target="_blank" rel="noopener noreferrer">typesafe.ai/blog/introducing-system-one-models-and-jev</a></p>
+        <small>Accessed September 24, 2026</small>
+      </div>
+      <div class="vendor">
+        <h3>Vendor claims used in this deck</h3>
+        <p>70–500 ms response time, structured type-safe output, calibrated probabilities, early-access availability.</p>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-size:1.25rem;margin-bottom:.4rem">Claims to validate independently</h3>
+      <ul class="list">
+        <li>Latency and cost from your own network locations</li>
+        <li>Decision quality on your own labeled cases</li>
+        <li>Probability calibration and threshold stability</li>
+        <li>Schema guarantee under retries, failures, and version changes</li>
+        <li>Security, privacy, retention, and data-use terms</li>
+        <li>Availability, support, observability, and exit strategy</li>
+      </ul>
+    </div>
+  </div>
+  <p class="callout">No claim in this deck should be treated as a production endorsement until the pilot exit criteria are met.</p>
+</article>
+
+</main>
+
+<nav class="nav" aria-label="Slide navigation">
+  <button type="button" id="prev" aria-label="Previous slide">← Back</button>
+  <span class="count" id="count" aria-live="polite">1 / 13</span>
+  <button type="button" id="next" class="next" aria-label="Next slide">Next →</button>
+</nav>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var stage = document.getElementById("stage");
+  var bar = document.getElementById("bar");
+  var count = document.getElementById("count");
+  var prev = document.getElementById("prev");
+  var next = document.getElementById("next");
+  var cur = -1;
+
+  function fromHash(){
+    var n = parseInt((location.hash || "").replace("#", ""), 10);
+    return (n >= 1 && n <= slides.length) ? n - 1 : 0;
+  }
+
+  function show(i, focus){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) slides[cur].classList.remove("active");
+    cur = i;
+    var s = slides[i];
+    s.classList.add("active");
+    document.body.setAttribute("data-theme", s.getAttribute("data-theme") || "light");
+    count.textContent = (i + 1) + " / " + slides.length;
+    bar.style.width = ((i + 1) / slides.length * 100) + "%";
+    prev.disabled = i === 0;
+    next.disabled = i === slides.length - 1;
+    stage.scrollTop = 0;
+    if (history.replaceState) history.replaceState(null, "", "#" + (i + 1));
+    document.title = (s.querySelector(".slide-heading") || {textContent: "JEV"}).textContent + " (" + (i + 1) + "/" + slides.length + ")";
+    if (focus) {
+      var h = s.querySelector(".slide-heading");
+      if (h) h.focus({preventScroll: true});
+    }
+  }
+
+  prev.addEventListener("click", function(){ show(cur - 1, true); });
+  next.addEventListener("click", function(){ show(cur + 1, true); });
+
+  document.addEventListener("keydown", function(e){
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target && e.target.tagName;
+    if (t === "INPUT" || t === "TEXTAREA") return;
+    switch (e.key) {
+      case "ArrowRight": case "PageDown": show(cur + 1, true); e.preventDefault(); break;
+      case "ArrowLeft":  case "PageUp":   show(cur - 1, true); e.preventDefault(); break;
+      case " ": if (t !== "BUTTON" && t !== "A") { show(cur + (e.shiftKey ? -1 : 1), true); e.preventDefault(); } break;
+      case "Home": show(0, true); e.preventDefault(); break;
+      case "End":  show(slides.length - 1, true); e.preventDefault(); break;
+    }
+  });
+
+  var sx = 0, sy = 0, tracking = false;
+  stage.addEventListener("touchstart", function(e){
+    if (e.touches.length !== 1 || (e.target.closest && e.target.closest("pre"))) { tracking = false; return; }
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true;
+  }, {passive: true});
+  stage.addEventListener("touchend", function(e){
+    if (!tracking) return;
+    tracking = false;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) show(cur + (dx < 0 ? 1 : -1), true);
+  }, {passive: true});
+
+  window.addEventListener("hashchange", function(){ show(fromHash(), false); });
+  show(fromHash(), false);
+})();
+</script>
+</body>
+</html>
